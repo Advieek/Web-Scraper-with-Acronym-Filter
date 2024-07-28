@@ -17,21 +17,17 @@ def main():
     url = input("Enter the website URL: ")
     html_tag = input("Enter the HTML tag for the main content (e.g., 'div', 'article', 'main'): ")
     
-    # Step 1: Extract text from website
     extracted_text = extract_text_from_website(url, html_tag)
     
     if not extracted_text:
         print("Failed to extract text from the website.")
         return
     
-    # Step 2 and 3: Extract acronyms and write to files
     acronyms = extract_acronyms(extracted_text)
     
-    # Write full text to file
     with open('extracted_text.txt', 'w', encoding='utf-8') as f:
         f.write(extracted_text)
     
-    # Write acronyms to file
     with open('acronyms.txt', 'w', encoding='utf-8') as f:
         for i, acronym in enumerate(acronyms, 1):
             f.write(f"{i}. {acronym}\n")
