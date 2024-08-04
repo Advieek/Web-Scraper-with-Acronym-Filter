@@ -1,0 +1,60 @@
+import re
+import pandas as pd
+from bs4 import BeautifulSoup
+import os
+
+def post_process_acronyms(acronyms):
+    filtered = [acr for acr in acronyms if len(acr) > 1]
+    seen = set()
+    return [acr for acr in filtered if not (acr in seen or seen.add(acr))]
+
+def find_acronyms(text):
+    pattern = r'\b(?:(?:[A-Z]\.){2,}[A-Z](?:\.[A-Z])*|\d*[A-Z]+\d*(?:[-_][A-Z]+\d*)*|[A-Z][a-z]+[A-Z][A-Za-z]*)\b'
+    found = re.findall(pattern, text)
+    return post_process_acronyms(found)
+
+def process_html_file(file_path, existing_acronyms):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        html_content = file.read()
+    
+    soup = BeautifulSoup(html_content, 'html.parser')
+    text = soup.get_text()
+    acronyms = find_acronyms(text)
+    new_acronyms = []
+
+    for acronym in acronyms:
+        if acronym not in existing_acronyms:
+            new_acronyms.append(acronym)
+            existing_acronyms.add(acronym)
+
+    return new_acronyms
+
+def main():
+    try:
+        existing_df = pd.read_csv('existing_acronyms.csv')
+        existing_acronyms = set(existing_df['Acronym'])
+    except FileNotFoundError:
+        existing_acronyms = set()
+
+    new_acronyms_list = []
+
+    html_directory = input("Enter the directory path containing HTML files: ").strip()
+    
+    for filename in os.listdir(html_directory):
+        if filename.endswith('.html'):
+            file_path = os.path.join(html_directory, filename)
+            print(f"Processing file: {filename}")
+            new_acronyms = process_html_file(file_path, existing_acronyms)
+            new_acronyms_list.extend([(acronym, filename) for acronym in new_acronyms])
+            print(f"Found {len(new_acronyms)} new acronyms from {filename}")
+
+    new_df = pd.DataFrame(new_acronyms_list, columns=['Acronym', 'Source'])
+
+    if not new_df.empty:
+        new_df.to_csv('new_acronyms.csv', index_label='Number', mode='a', header=not existing_acronyms)
+        print(f"\nAdded {len(new_df)} new acronyms to 'new_acronyms.csv'")
+    else:
+        print("\nNo new acronyms found.")
+
+if __name__ == "__main__":
+    main()
